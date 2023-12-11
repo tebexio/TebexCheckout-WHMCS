@@ -1,0 +1,24 @@
+{
+    "schema": "1.0",
+    "type": "whmcs-gateways",
+    "name": "tebexcheckout",
+    "license": "MIT License",
+    "category": "payments",
+    "description": {
+      "name": "Tebex Checkout",
+      "tagline": "Gaming payments done right with over 120 payment methods, chargeback protection, fraud protection, and 3-day payouts."
+    },
+    "logo": {
+      "filename": "logo.png"
+    },
+    "support": {
+      "docs_url": "https:\/\/docs.tebex.io\/creators\/tebex-checkout\/whmcs-payment-gateway"
+    },
+    "authors": [
+      {
+        "name": "Tebex",
+        "homepage": "https:\/\/tebex.io\/"
+      }
+    ]
+  }
+  
