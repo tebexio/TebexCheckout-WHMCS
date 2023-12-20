@@ -93,14 +93,14 @@ function tebexcheckout_config()
             'Type' => 'text',         // a text field type allows for single line text input
             'Size' => '50',
             'Default' => '',
-            'Description' => 'Account ID (you can get this from https://creator.tebex.io/payment-methods/settings)',
+            'Description' => 'Account ID (you can get this from https://creator.tebex.io/developers/api-keys)',
         ),
         'apiKey' => array(
             'FriendlyName' => 'API Key',
             'Type' => 'password',         // a password field type allows for masked text input
             'Size' => '25',
             'Default' => '',
-            'Description' => 'Your API key (you can get this from https://creator.tebex.io/payment-methods/settings)',
+            'Description' => 'Your API key (you can get this from https://creator.tebex.io/developers/api-keys)',
         ),
         'webhookSecretKey' => array(
             'FriendlyName' => 'Webhook Secret',
