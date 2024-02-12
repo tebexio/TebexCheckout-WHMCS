@@ -8,6 +8,7 @@
  *  POST /checkout and providing all details (basket, items and sale details) 
  *  in a single request.
  *
+ * @see https://docs.tebex.io/developers/checkout-api/overview/
  * @see https://developers.whmcs.com/payment-gateways/
  *
  * Features

@@ -1,6 +1,6 @@
 <?php
 /**
- * WHMCS Sample Payment Callback File
+ * Tebex Payment Gateway for WHMCS Callback
  *
  * This sample file demonstrates how a payment gateway callback should be
  * handled within WHMCS.
@@ -11,10 +11,11 @@
  *
  * For more information, please refer to the online documentation.
  *
+ * @see https://docs.tebex.io/developers/webhooks/overview/
  * @see https://developers.whmcs.com/payment-gateways/callbacks/
- *
- * @copyright Copyright (c) WHMCS Limited 2017
- * @license http://www.whmcs.com/license/ WHMCS Eula
+ * 
+ * @copyright Tebex.io
+ * @license MIT License
  */
 
 // Require libraries needed for gateway module functions.
@@ -68,11 +69,8 @@ $data = json_decode($json, true);
  *
  * Add an entry to the Gateway Log for debugging purposes.
  *
- * The debug data can be a string or an array. In the case of an
- * array it will be
- *
  * @param string $gatewayName        Display label
- * @param string|array $debugData    Data to log
+ * @param string $debugData          Data to log
  * @param string $transactionStatus  Status
  */
 logTransaction($gatewayParams['name'], $json, $data["type"]);

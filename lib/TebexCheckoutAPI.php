@@ -15,17 +15,33 @@ class TebexCheckoutAPI
     private string $secretKey;
     private string $payload;   // for display in module log
 
-    private function __construct(string|null $accountId, string|null $secretKey)
+    private function __construct(string $accountId, string $secretKey)
     {
-        $this->accountId = $accountId ?? "";
-        $this->secretKey = $secretKey ?? "";
+        $this->accountId = $accountId ?: "";
+        $this->secretKey = $secretKey ?: "";
     }
 
-    public static function new(string $accountId, string $secretKey) : TebexCheckoutAPI {
+    /**
+     * Create a new accessor for the API with an account ID and secret key
+     * 
+     * @param string accountId
+     * @param string secretKey
+     * 
+     * @return TebexCheckoutAPI
+     */
+    public static function new(string $accountId, string $secretKey) {
         return new TebexCheckoutAPI($accountId, $secretKey);
     }
 
-    public static function noAuth() : TebexCheckoutAPI {
+    /**
+     * Create a new API accessor without authentication
+     * 
+     * @param string accountId
+     * @param string secretKey
+     * 
+     * @return TebexCheckoutAPI
+     */
+    public static function noAuth() {
         return new TebexCheckoutAPI(null, null);
     }
 
@@ -33,31 +49,47 @@ class TebexCheckoutAPI
 
     /**
      * @see https://docs.tebex.io/developers/checkout-api/endpoints#create-a-basket-that-can-be-used-to-pay-for-items
+     * @return CheckoutBasketPayload | null
      */
-    public function fetchBasket(string $basketId) : CheckoutBasketPayload | null {
+    public function fetchBasket(string $basketId) {
         return json_decode($this->get("baskets"));
     }
 
-    public function addPackageToBasket(string $basketId, Package $package) : mixed {
+    /**
+     * @return mixed
+     */
+    public function addPackageToBasket(string $basketId, Package $package) {
         return json_decode($this->post("baskets/{$basketId}/packages", $package));
     }
 
-    public function createBasket(array $payload) : mixed {
+    /**
+     * @return mixed
+     */
+    public function createBasket(array $payload) {
         return json_decode($this->post("baskets", $payload));
     }
 
-    public function removeRowFromBasket(string $basketId, int $rowId) : mixed {
+    /**
+     * @return mixed
+     */
+    public function removeRowFromBasket(string $basketId, int $rowId) {
         return json_decode($this->delete("baskets/${basketId}/packages/${rowId}"));
     }
 
-    public function addSaleToBasket(string $basketId, Sale $sale) : mixed {
+    /**
+     * @return mixed
+     */
+    public function addSaleToBasket(string $basketId, Sale $sale) {
         return json_decode($this->post("baskets/${basketId}/sales", $sale));
     }
 
     /**
      * @see https://docs.tebex.io/developers/checkout-api/endpoints#create-a-checkout-request
+     * @param CheckoutBasketPayload $basket
+     * @param Sale|null $sale
+     * @return mixed
      */
-    public function createCheckoutRequest(CheckoutBasketPayload $basket, Sale|null $sale) : mixed {
+    public function createCheckoutRequest(CheckoutBasketPayload $basket, $sale) {
         $payload = [
             "basket" => $basket,
             "items" => $basket->items(),
@@ -71,15 +103,17 @@ class TebexCheckoutAPI
 
     /**
      * @see https://docs.tebex.io/developers/checkout-api/endpoints#fetch-a-payment-by-its-transaction-id
+     * @return mixed
      */
-    public function fetchPaymentById(string $txn_id) : mixed {
+    public function fetchPaymentById(string $txn_id) {
         return json_decode($this->get("payments/$txn_id?type=txn_id"), true);
     }
 
     /**
      * @see https://docs.tebex.io/developers/checkout-api/endpoints#refund-a-payment-by-its-transaction-id
+     * @return mixed
      */
-    public function refundPaymentByID(string $txn_id) : mixed {
+    public function refundPaymentByID(string $txn_id) {
         return json_decode($this->post("payments/$txn_id/refund?type=txn_id", []), true);
     }
 
@@ -87,35 +121,50 @@ class TebexCheckoutAPI
 
     /**
      * @see https://docs.tebex.io/developers/checkout-api/endpoints#cancel-a-recurring-payment
+     * @return mixed
      */
-    public function fetchRecurringPayment(string $paymentReference) : mixed {
+    public function fetchRecurringPayment(string $paymentReference) {
         return $this->get("recurring-payments/$paymentReference");
     }
 
-    public function updateSubscribedProduct(string $paymentReference, array $items) : mixed {
+    /**
+     * @return mixed
+     */
+    public function updateSubscribedProduct(string $paymentReference, array $items) {
         return $this->put("recurring-payments/$paymentReference", $items);
     }
 
-    public function pauseRecurringPayment(string $paymentReference) : mixed { 
+    /**
+     * @return mixed
+     */
+    public function pauseRecurringPayment(string $paymentReference) { 
         return $this->updateRecurringPaymentStatus($paymentReference, RecurringPaymentStatus::Paused);
     }
 
-    public function reactivateRecurringPayment(string $paymentReference) : mixed {
+    /**
+     * @return mixed
+     */
+    public function reactivateRecurringPayment(string $paymentReference) {
         return $this->updateRecurringPaymentStatus($paymentReference, RecurringPaymentStatus::Active);
     }
 
-    public function updateRecurringPaymentStatus(string $paymentReference, RecurringPaymentStatus $status) : mixed {
+    /**
+     * @return mixed
+     */
+    public function updateRecurringPaymentStatus(string $paymentReference, RecurringPaymentStatus $status) {
         return $this->put("recurring-payments/$paymentReference/status", [
             "status" => $status
         ]);
     }
 
-    public function cancelRecurringPayment(string $paymentReference) : mixed {
+    /**
+     * @return mixed
+     */
+    public function cancelRecurringPayment(string $paymentReference) {
         return $this->delete("recurring-payments/$paymentReference");
     }
 
     // Utility functions
-
     private function get(string $endpoint)
     {
         $url = $this->buildUrl($endpoint);
@@ -125,7 +174,10 @@ class TebexCheckoutAPI
         return $this->executeRequest($ch);
     }
 
-    private function post(string $endpoint, object|array $data)
+    /**
+     * @param object|array $data
+     */
+    private function post(string $endpoint, $data)
     {
         $this->payload = json_encode($data);
         
@@ -138,10 +190,13 @@ class TebexCheckoutAPI
         return $this->executeRequest($ch);
     }
 
-    public function post_plugin_log(object|array $data) 
+    /**
+     * @param object|array $data
+     */
+    public function post_plugin_log($data) 
     {
         $this->payload = json_encode($data);
-        
+
         $url = "https://plugin-logs.tebex.io/";
         $ch = $this->prepareCurl($url);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -151,7 +206,10 @@ class TebexCheckoutAPI
         return $this->executeRequest($ch);
     }
 
-    private function put(string $endpoint, object|array $data)
+    /**
+     * @param object|array $data
+     */
+    private function put(string $endpoint, $data)
     {
         $this->payload = json_encode($data);
 
@@ -172,7 +230,10 @@ class TebexCheckoutAPI
         return $this->executeRequest($ch);
     }
 
-    private function prepareCurl(string $url) : CurlHandle
+    /**
+     * @return CurlHandle
+     */
+    private function prepareCurl(string $url)
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
@@ -187,7 +248,10 @@ class TebexCheckoutAPI
         return $ch;
     }
 
-    private function executeRequest(CurlHandle $ch) : mixed
+    /**
+     * @return mixed
+     */
+    private function executeRequest(CurlHandle $ch)
     {
         $response = curl_exec($ch);
         $requestInfo = curl_getinfo($ch);
@@ -217,7 +281,10 @@ class TebexCheckoutAPI
         return $response;
     }
 
-    private function buildUrl(string $endpoint) : string
+    /**
+     * @return string
+     */
+    private function buildUrl(string $endpoint)
     {
         return rtrim($this->apiUrl, '/') . '/' . ltrim($endpoint, '/');
     }
