@@ -30,7 +30,7 @@ use WHMCS\Database\Capsule;
 
 // Tebex SDK imports
 // If we are in our internal gateway folder, we're a symlink and need to change our require directories
-if (str_ends_with(__DIR__, 'tebexcheckout/gateway')) {
+if (substr(__DIR__, -strlen('tebexcheckout/gateway')) === 'tebexcheckout/gateway') {
     require_once __DIR__ . '/../lib/TebexCheckoutAPI.php';
     require_once __DIR__ . '/../lib/Models.php';
     require_once __DIR__ . '/../lib/CheckoutApiError.php';

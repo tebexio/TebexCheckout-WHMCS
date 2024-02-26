@@ -9,7 +9,7 @@
 #
 # This structure allows a user to unzip the archive directly into their `gateways` folder in order to install Tebex.
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # Make temporary build dir, clearing it out if it existed
 rm -r .build;mkdir .build
@@ -29,7 +29,7 @@ cp callback/tebexcheckout.php .build/callback/tebexcheckout.php
 cp gateway/tebexcheckout.php .build/tebexcheckout.php
 
 # Set version in display name
-sed -i "s/\%VERSION%/$VERSION/g" .build/tebexcheckout.php
+sed -i '' "s/\%VERSION%/$VERSION/g" .build/tebexcheckout.php
 
 # Create the zip
 cd .build

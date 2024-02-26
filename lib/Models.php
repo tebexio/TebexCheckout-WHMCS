@@ -460,8 +460,8 @@ class Package implements JsonSerializable {
     }
 }
 
-enum ExpiryPeriod {
-    case day;
-    case month;
-    case year;
+class ExpiryPeriod {
+    const day = 'day';
+    const month = 'month';
+    const year = 'year';
 }

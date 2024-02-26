@@ -337,12 +337,12 @@ class TriageEvent {
     }
 }
 
-enum RecurringPaymentStatus {
-    case Paused;
-    case Active;
+class RecurringPaymentStatus {
+    const Paused = 'Paused';
+    const Active = 'Active';
 }
 
-enum PackagePaymentType {
-    case single;
-    case subscription;
+class PackagePaymentType {
+    const single = 'single';
+    const subscription = 'subscription';
 }

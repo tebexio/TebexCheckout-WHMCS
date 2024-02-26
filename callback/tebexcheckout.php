@@ -19,7 +19,7 @@
  */
 
 // Require libraries needed for gateway module functions.
-if (str_ends_with(__DIR__, 'tebexcheckout/callback')) {
+if (substr(__DIR__, -strlen('tebexcheckout/callback')) === 'tebexcheckout/callback') {
     require_once __DIR__ . '/../../../../init.php';
     require_once __DIR__ . '/../../../../includes/gatewayfunctions.php';
     require_once __DIR__ . '/../../../../includes/invoicefunctions.php';
@@ -87,7 +87,7 @@ $paymentWebhookSubject = $paymentWebhook->subject;
 
 // Retrieve data returned in payment gateway callback
 // Varies per payment gateway
-$success = !str_contains($data["type"], "declined");
+$success = strpos($data["type"], "declined") === false;
 
 $invoiceId = $data["subject"]["custom"]["invoiceId"] ?? $data["subject"]["last_payment"]["custom"]["invoiceId"];
 $transactionId = $paymentWebhookSubject->transaction_id;
