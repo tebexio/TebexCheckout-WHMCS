@@ -37,6 +37,10 @@ Installation and Setup
 
 Once your API keys are set, you are ready to accept payments!
 
+Webhook Validation
+==================
+It is **extremely important** that a webhook is configured and passed validation for your store. If a webhook is not configured and validated, your store will not receive any callback events from Tebex. View our guide for setting up webhook endpoints here: https://docs.tebex.io/developers/webhooks/overview
+
 Frequently Asked Questions
 ==========================
 
