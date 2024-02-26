@@ -13,7 +13,7 @@ class TebexCheckoutWebhook {
 
         if ($data["type"] == "validation.webhook") {
             $this->subject = [];
-        } else if (str_contains($this->type, "recurring")) {
+        } else if (strpos($this->type, "recurring") !== false) {
             $this->subject = new RecurringPaymentWebhookSubject($data['subject']);
         } else {
             $this->subject = new PaymentWebhookSubject($data['subject']);

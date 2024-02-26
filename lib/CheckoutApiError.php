@@ -34,7 +34,10 @@ class CheckoutAPIError extends Exception
         }
     }
 
-    public function withMessage(string $value) : CheckoutApiError {
+    /**
+     * @return CheckoutApiError
+     */
+    public function withMessage(string $value) {
         $this->errorDetail = "$value: {$this->errorDetails}";
         return $this;
     }

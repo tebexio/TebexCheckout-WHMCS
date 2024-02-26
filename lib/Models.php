@@ -45,46 +45,46 @@ class CheckoutBasketPayload implements JsonSerializable {
     private function __construct() {
     }
 
-    public static function new() : CheckoutBasketPayload {
+    public static function new() {
         return new CheckoutBasketPayload();
     }
 
-    public function recurring(bool $value) : CheckoutBasketPayload {
+    public function recurring(bool $value) {
         $this->recurring = $value;
         return $this;
     }
 
-    public function firstname(string $value) : CheckoutBasketPayload {
+    public function firstname(string $value) {
         $this->first_name = $value;
         return $this;
     }
 
-    public function lastname(string $value) : CheckoutBasketPayload {
+    public function lastname(string $value) {
         $this->last_name = $value;
         return $this;
     }
 
-    public function email(string $value) : CheckoutBasketPayload {
+    public function email(string $value) {
         $this->email = $value;
         return $this;
     }
 
-    public function returnUrl(string $value) : CheckoutBasketPayload {
+    public function returnUrl(string $value) {
         $this->return_url = $value;
         return $this;
     }
 
-    public function completeUrl(string $value) : CheckoutBasketPayload {
+    public function completeUrl(string $value) {
         $this->complete_url = $value;
         return $this;
     }
 
-    public function custom(array $custom) : CheckoutBasketPayload {
+    public function custom(array $custom) {
         $this->custom = $custom;        
         return $this;
     }
 
-    public function expires_at(DateTime $value) : CheckoutBasketPayload {
+    public function expires_at(DateTime $value) {
         $this->expires_at = $value;
         return $this;
     }
@@ -93,17 +93,17 @@ class CheckoutBasketPayload implements JsonSerializable {
      * Sets the baskets items to the array provided, overwriting any other items in the basket
      * @return CheckoutBasketPayload
      */
-    public function withItems(array $basketItems): CheckoutBasketPayload {
+    public function withItems(array $basketItems) {
         $this->basketItems = $basketItems;
         return $this;
     }
 
-    public function addItem(BasketItem $item) : CheckoutBasketPayload {
+    public function addItem(BasketItem $item) {
         array_push($this->basketItems, $item);
         return $this;
     }
 
-    public function items() : array {
+    public function items() {
         return $this->basketItems;
     }
 
@@ -131,11 +131,11 @@ class BasketItem implements JsonSerializable {
     private function __construct() {
     }
 
-    public static function new() : BasketItem {
+    public static function new() {
         return new BasketItem();
     }
 
-    public function package(Package $package) : BasketItem {
+    public function package(Package $package) {
         $this->package = $package;
 
         if ($this->qty == 0) {
@@ -149,17 +149,17 @@ class BasketItem implements JsonSerializable {
         return $this;
     }
 
-    public function quantity(int $quantity) : BasketItem {
+    public function quantity(int $quantity) {
         $this->quantity = $quantity;
         return $this;
     }
 
-    public function revenueShare(object $revShareObj) : BasketItem {
+    public function revenueShare(object $revShareObj) {
         $this->revenueShare = $revShareObj;
         return $this;
     }
 
-    public function sale(Sale $saleObj) : BasketItem {
+    public function sale(Sale $saleObj) {
         $this->sale = $saleObj;
         return $this;
     }
@@ -223,11 +223,11 @@ class Meta extends JsonData {
 
     }
 
-    public static function new() : Meta {
+    public static function new() {
         return new Meta();
     }
 
-    public function custom(array $value) : Meta {
+    public function custom(array $value) {
         $this->custom = json_encode($value);
         return $this;
     }
@@ -375,21 +375,21 @@ class RevenueShare implements JsonSerializable {
     private function __construct() {
     }
 
-    public static function new() : RevenueShare {
+    public static function new() {
         return new RevenueShare();
     }
 
-    public function wallet_ref(string $value) : RevenueShare {
+    public function wallet_ref(string $value) {
         $this->wallet_ref = $value;
         return $this;
     }
 
-    public function amount(float $value) : RevenueShare {
+    public function amount(float $value) {
         $this->amount = $value;
         return $this;
     }
 
-    public function gateway_fee_percent(string $value) : RevenueShare {
+    public function gateway_fee_percent(string $value) {
         $this->gateway_fee_percent = 0;
         return $this;
     }
@@ -406,7 +406,7 @@ class RevenueShare implements JsonSerializable {
 class Package implements JsonSerializable {
     private string $name = "";
     private float $price = 0.00;
-    private ExpiryPeriod|null $expiry_period = null;
+    private ExpiryPeriod $expiry_period;
     private int $expiry_length = 1;
     private Meta $metadata;
 
@@ -416,35 +416,35 @@ class Package implements JsonSerializable {
 
     }
 
-    public static function new() : Package {
+    public static function new() {
         return new Package();
     }
 
-    public function name(string $name) : Package {
+    public function name(string $name) {
         $this->name = $name;
         return $this;
     }
 
-    public function price(float $price) : Package {
+    public function price(float $price) {
         $this->price = $price;
         return $this;
     }
-    public function expiryPeriod(ExpiryPeriod $value) : Package {
+    public function expiryPeriod(ExpiryPeriod $value) {
         $this->expiry_period = $value;
         return $this;
     }
 
-    public function expiryLength(int $days) : Package {
+    public function expiryLength(int $days) {
         $this->expiry_length = $days;
         return $this;
     }
 
-    public function metadata(Meta $data) : Package {
+    public function metadata(Meta $data) {
         $this->metadata = $data;
         return $this;
     }
 
-    public function subscription(bool $value) : Package {
+    public function subscription(bool $value) {
         $this->subscription = $value;
         return $this;
     }
@@ -460,8 +460,8 @@ class Package implements JsonSerializable {
     }
 }
 
-enum ExpiryPeriod {
-    case day;
-    case month;
-    case year;
+class ExpiryPeriod {
+    const day = 'day';
+    const month = 'month';
+    const year = 'year';
 }
