@@ -1,15 +1,8 @@
 <?php
 /**
- * WHMCS Sample Payment Callback File
+ * Tebex Checkout Callback Script for WHMCS
  *
- * This sample file demonstrates how a payment gateway callback should be
- * handled within WHMCS.
- *
- * It demonstrates verifying that the payment gateway module is active,
- * validating an Invoice ID, checking for the existence of a Transaction ID,
- * Logging the Transaction for debugging and Adding Payment to an Invoice.
- *
- * For more information, please refer to the online documentation.
+ * This file is based on the example WHMCS payment gateawy callback.
  *
  * @see https://developers.whmcs.com/payment-gateways/callbacks/
  *
@@ -18,19 +11,57 @@
  */
 
 // Require libraries needed for gateway module functions.
-if (str_ends_with(__DIR__, 'tebexcheckout/callback')) {
-    require_once __DIR__ . '/../../../../init.php';
-    require_once __DIR__ . '/../../../../includes/gatewayfunctions.php';
-    require_once __DIR__ . '/../../../../includes/invoicefunctions.php';
-    require_once __DIR__ . '/../../tebexcheckout/lib/WebhookSubjects.php';
-} else { // Production require dirs
-    require_once __DIR__ . '/../../../init.php';
-    require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
-    require_once __DIR__ . '/../../../includes/invoicefunctions.php';
-    require_once __DIR__ . '/../tebexcheckout/lib/WebhookSubjects.php';
-}
+require_once __DIR__ . '/../../../../init.php';
+require_once __DIR__ . '/../../../../includes/gatewayfunctions.php';
+require_once __DIR__ . '/../../../../includes/invoicefunctions.php';
+
+require_once __DIR__ . '/../../tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/HeaderSelector.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/ObjectSerializer.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Configuration.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/BasketsApi.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/ApiException.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/CheckoutApi.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/PaymentsApi.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/RecurringPaymentsApi.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/ModelInterface.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutRequest.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutRequestBasket.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/CreateBasketRequest.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutItem.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/TebexWebhook.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/Package.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/Basket.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/PriceDetails.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/Address.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRow.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMeta.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMetaLimits.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMetaLimitsUser.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketLinks.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/PaymentSubject.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/PaymentSubjectProductsInner.php';
+require_once __DIR__ . '/../../tebexcheckout/lib/Model/RecurringPaymentSubject.php';
 
 
+use TebexCheckout\Model\Address;
+use TebexCheckout\Model\PriceDetails;
+use TebexCheckout\Model\Basket;
+use TebexCheckout\Model\BasketRow;
+use TebexCheckout\Model\CheckoutItem;
+use TebexCheckout\Model\CheckoutRequest;
+use TebexCheckout\Model\CheckoutRequestBasket;
+use TebexCheckout\Model\CreateBasketRequest;
+use TebexCheckout\Model\Package;
+use TebexCheckout\Model\TebexWebhook;
+use TebexCheckout\TebexCheckout\BasketsApi;
+use TebexCheckout\TebexCheckout\CheckoutApi;
+use TebexCheckout\TebexCheckout\PaymentsApi;
+use TebexCheckout\TebexCheckout\RecurringPaymentsApi;
+use TebexCheckout\Model\PaymentSubjectProductsInner;
+use TebexCheckout\Model\PaymentSubject;
+use TebexCheckout\Model\RecurringPaymentSubject;
+use GuzzleHttp\Psr7\Utils;
 use WHMCS\Database\Capsule;
 
 // Detect module name from filename.
@@ -57,11 +88,11 @@ $incomingSignature = $_SERVER['HTTP_X_SIGNATURE'];
 if ($incomingSignature != hash_hmac('sha256', hash('sha256', $json), $webhookSecretKey)) {
     $transactionStatus = 'Hash Verification Failure';
     $success = false;
-    echo "Hash Verification Failure - Check Webhook Secret Key";
+    echo "Hash Verification Failure - Check Webhook Secret Key ";
     return $success;
 }
 
-$data = json_decode($json, true);
+$webhookDecodedJson = json_decode($json, true);
 
 /**
  * Log Transaction.
@@ -75,89 +106,143 @@ $data = json_decode($json, true);
  * @param string|array $debugData    Data to log
  * @param string $transactionStatus  Status
  */
-logTransaction($gatewayParams['name'], $json, $data["type"]);
+logTransaction($gatewayParams['name'], $json, $webhookDecodedJson["type"]);
 
-$paymentWebhook = new TebexCheckoutWebhook($data);
+$webhook = new TebexWebhook([
+    "id" => $webhookDecodedJson["id"],
+    "type" => $webhookDecodedJson["type"],
+    "date" => $webhookDecodedJson["date"],
+    "subject" =>$webhookDecodedJson["subject"]
+]);
 
-// Validation webhook wants us to return the ID in a json format
-if ($paymentWebhook->type == "validation.webhook") {
-    echo(json_encode(["id" => $paymentWebhook->id]));
+if ($webhook->getType() == "validation.webhook") {
+    // Validation webhook wants us to return the ID in a json format to confirm the endpoint works
+    echo json_encode(["id" => $webhook->getId()]);
     return;
 }
 
-$paymentWebhookSubject = $paymentWebhook->subject;
+if (str_contains($webhook->getType(), "recurring-payment.")) {
+    // Add subscription ID to a recurring payment product if applicable
+    $recurringSubject = new RecurringPaymentSubject($webhook->getSubject());
+    
+    if ($webhook->getType() == "recurring-payment.started") {
+        $subject = $webhook->getSubject();
+        $recurringWebhookSubject = new RecurringPaymentSubject([
+            'reference' => $subject["reference"],
+            'created_at' => $subject["created_at"],
+            'paused_at' => $subject["paused_at"],
+            'paused_until' => $subject["paused_until"],
+            'next_payment_at' => $subject["next_payment_at"],
+            'status' => $subject["status"],
+            'initial_payment' => new PaymentSubject($subject["initial_payment"]),
+            'last_payment' => new PaymentSubject($subject["last_payment"]),
+            'fail_count' => $subject["fail_count"],
+            'price' => $subject["price"],
+            'cancelled_at' => $subject["cancelled_at"],
+            'cancel_reason' => $subject["cancel_reason"]
+        ]);
 
-// Retrieve data returned in payment gateway callback
-// Varies per payment gateway
-$success = !str_contains($data["type"], "declined");
+        $lastPayment = new PaymentSubject($recurringSubject->getLastPayment());
+        
+        // identify the internal WHMCS product associated with the subscription and apply our subscription id
+        $products = $lastPayment->getProducts();
+        foreach ($products as $paidProduct) {
+            $recurringProductType = $paidProduct["custom"]["type"]; // hosting, addon, etc. included when we built the initial basket for the invoice
+            $recurringProductRelid = $paidProduct["custom"]["relid"];
 
-$invoiceId = $data["subject"]["custom"]["invoiceId"] ?? $data["subject"]["last_payment"]["custom"]["invoiceId"];
-$transactionId = $paymentWebhookSubject->transaction_id;
-$paymentAmount = $paymentWebhookSubject->price_paid->amount;
-$paymentFee = $paymentWebhookSubject->fees->gateway->amount;
-$transactionStatus = $success ? 'Success' : 'Failure';
+            if ($recurringProductType == "hosting") {
+                Capsule::table('tblhosting')->where('id', '=', intval($recurringProductRelid))->update([
+                    'subscriptionid' => $recurringWebhookSubject->getReference(),
+                ]);
+            } else if ($recurringProductType == "addon") {
+                Capsule::table('tblhostingaddons')->where('id', '=', intval($recurringProductRelid))->update([
+                    'subscriptionid' => $recurringWebhookSubject->getReference(),
+                ]);
+            } else { // unrecognized product type is being sent with a subscription payment, should be a hosting or a addon.
+                logModuleCall("Tebex Checkout", "successfully created Tebex basket", $checkoutRequest, $checkoutBasket, $checkoutBasket, "", "");
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Could not find relid `" . $recurringProductRelid . "`" . " of type " . $recurringProductType
+                ]);
+                http_response_code(400);
+                return;
+            }
+        }
 
+        $paymentType = $lastPayment->getProducts();
+        $paymentRelid = $lastPayment->getProducts()[0]["custom"]["relid"];
+        
+    } else { // unrecognized recurring payment webhook
+        echo json_encode([
+            "success" => false,
+            "message" => "Unsupported webhook type: " . $webhook->getType()
+        ]);
+        http_response_code(400);    
+    }
+} else if (str_contains($webhook->getType(), "payment.")) {
+    // Handle payment notification webhooks, we need to update the paid invoice to have a status of Paid.
+    $paymentSubject = new PaymentSubject($webhook->getSubject());
 
-/**
- * Validate Callback Invoice ID.
- *
- * Checks invoice ID is a valid invoice number. Note it will count an
- * invoice in any status as valid.
- *
- * Performs a die upon encountering an invalid Invoice ID.
- *
- * Returns a normalised invoice ID.
- *
- * @param int $invoiceId Invoice ID
- * @param string $gatewayName Gateway Name
- */
+    $invoiceId = $paymentSubject->getCustom()["invoiceId"];
+    $transactionId = $paymentSubject->getTransactionId();
 
-$invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['name']);
-
-/**
- * Check Callback Transaction ID.
- *
- * Performs a check for any existing transactions with the same given
- * transaction number.
- *
- * Performs a die upon encountering a duplicate.
- *
- * @param string $transactionId Unique Transaction ID
- */
-checkCbTransID($transactionId);
-
-
-if ($success) {
+    // tax is included as part of the transaction fees. the payment amount will be the full amount paid so we must separate the two for reporting
+    // otherwise it will appear that the customer overpays and has a remaining credit balance
+    $paymentFee = $paymentSubject->getFees()["gateway"]["amount"] + $paymentSubject->getFees()["tax"]["amount"];
+    $paymentAmount = $paymentSubject->getPricePaid()["amount"] - $paymentFee;
+    $transactionStatus = $paymentSubject->getStatus()["description"] == "Complete" ? 'Success' : 'Failure';
 
     /**
-     * Add Invoice Payment.
+     * Validate Callback Invoice ID.
      *
-     * Applies a payment transaction entry to the given invoice ID.
+     * Checks invoice ID is a valid invoice number. Note it will count an
+     * invoice in any status as valid.
      *
-     * @param int $invoiceId         Invoice ID
-     * @param string $transactionId  Transaction ID
-     * @param float $paymentAmount   Amount paid (defaults to full balance)
-     * @param float $paymentFee      Payment fee (optional)
-     * @param string $gatewayModule  Gateway module name
+     * Performs a die upon encountering an invalid Invoice ID.
+     *
+     * Returns a normalised invoice ID.
+     *
+     * @param int $invoiceId Invoice ID
+     * @param string $gatewayName Gateway Name
      */
-    addInvoicePayment(
-        $invoiceId,
-        $transactionId,
-        $paymentAmount,
-        $paymentFee,
-        $gatewayModuleName
-    );
+    $invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['name']);
 
-    // Add subscription ID to a recurring payment product if applicable
-    if ($data["type"] == "recurring-payment.started") {
-        $subscriptionRef = json_decode($data["subject"]["initial_payment"]["products"][0]["custom"], true); //json encoded meta custom value containing relid
-        $hosting = Capsule::table('tblhosting')->where('id', '=', $subscriptionRef["relid"])->update([
-            'subscriptionid' => $paymentWebhook->subject->reference,
-        ]);
-        if ($hosting != null) {
-            echo "Subscription ID set successfully";
-        } else {
-            echo "Could not find hosting object";
-        }
+    /**
+     * Check Callback Transaction ID.
+     *
+     * Performs a check for any existing transactions with the same given
+     * transaction number.
+     *
+     * Performs a die upon encountering a duplicate.
+     *
+     * @param string $transactionId Unique Transaction ID
+     */
+    checkCbTransID($transactionId);
+
+    if ($transactionStatus == "Success") {
+        /**
+         * Add Invoice Payment.
+         *
+         * Applies a payment transaction entry to the given invoice ID.
+         *
+         * @param int $invoiceId         Invoice ID
+         * @param string $transactionId  Transaction ID
+         * @param float $paymentAmount   Amount paid (defaults to full balance)
+         * @param float $paymentFee      Payment fee (optional)
+         * @param string $gatewayModule  Gateway module name
+         */
+        addInvoicePayment(
+            $invoiceId,
+            $transactionId,
+            $paymentAmount,
+            $paymentFee,
+            $gatewayModuleName
+        );
     }
+} else { // Handle unrecognized webhooks
+    echo json_encode([
+        "success" => false,
+        "message" => "Unsupported webhook type: " . $webhook->getType()
+    ]);
+    http_response_code(400);
 }
