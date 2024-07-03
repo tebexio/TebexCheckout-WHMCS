@@ -9,7 +9,7 @@
 #
 # This structure allows a user to unzip the archive directly into their `gateways` folder in order to install Tebex.
 
-VERSION="1.0.0"
+VERSION="2.0.0"
 
 # Make temporary build dir, clearing it out if it existed
 rm -r .build;mkdir .build
@@ -17,6 +17,7 @@ mkdir .build/tebexcheckout
 
 # Copy main module files
 cp -r lib .build/tebexcheckout/
+cp -r vendor .build/tebexcheckout/
 cp ./logo.png .build/tebexcheckout/logo.png
 cp ./README.md .build/tebexcheckout/README.md
 cp ./whmcs.json .build/tebexcheckout/whmcs.json
@@ -35,3 +36,12 @@ sed -i "s/\%VERSION%/$VERSION/g" .build/tebexcheckout.php
 cd .build
 zip -r TebexCheckout-WHMCS-$VERSION.zip *
 cd ..
+
+# if in dev, copy the repo files to their install locations
+if [[ "$(pwd)" == "/var/www/html/modules/gateways/tebexcheckout" ]]; then
+    echo "Installing gateway scripts to active WHMCS instance..."
+    cp -r ./gateway/tebexcheckout.php ../
+    cp -r ./callback/tebexcheckout.php ../callback/
+else
+    echo "You are not in the correct directory. Exiting..."
+fi
