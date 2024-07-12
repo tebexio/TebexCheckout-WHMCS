@@ -25,38 +25,39 @@ if (!defined("WHMCS")) {
 }
 
 require_once __DIR__ . '/tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
-require_once __DIR__ . '/tebexcheckout/lib/HeaderSelector.php';
-require_once __DIR__ . '/tebexcheckout/lib/ObjectSerializer.php';
-require_once __DIR__ . '/tebexcheckout/lib/Configuration.php';
-require_once __DIR__ . '/tebexcheckout/lib/BasketsApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/PaymentsApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/ApiException.php';
-require_once __DIR__ . '/tebexcheckout/lib/CheckoutApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/ModelInterface.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/CheckoutRequest.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/CheckoutRequestBasket.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/CreateBasketRequest.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/CheckoutItem.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/Package.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/Basket.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PriceDetails.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/Address.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/BasketRow.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/BasketRowMeta.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/BasketRowMetaLimits.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/BasketRowMetaLimitsUser.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/BasketLinks.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/Payment.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentStatus.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentPrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentFees.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentFeesTax.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentFeesGateway.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentCustomer.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentProductsInner.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentProductsInnerBasePrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/PaymentProductsInnerPaidPrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/Model/RecurringPayment.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/HeaderSelector.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/ObjectSerializer.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Configuration.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/BasketsApi.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/PaymentsApi.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/ApiException.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/CheckoutApi.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/ModelInterface.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutRequest.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutRequestBasket.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CreateBasketRequest.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutItem.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Package.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Basket.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PriceDetails.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Address.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRow.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMeta.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimits.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimitsUser.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketLinks.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Payment.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentStatus.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentPrice.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFees.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFeesTax.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFeesGateway.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentCustomer.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInner.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInnerBasePrice.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInnerPaidPrice.php';
+require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/RecurringPayment.php';
+require_once __DIR__ . '/tebexcheckout/lib/plugin-sdk/PluginEvent.php';
 
 
 use TebexCheckout\Model\Address;
@@ -310,7 +311,15 @@ function tebexcheckout_link($params)
         logModuleCall("Tebex Checkout", "successfully created Tebex basket", $checkoutRequest, $checkoutBasket, $checkoutBasket, "", "");
     } catch (TebexCheckout\ApiException $e) {
         logModuleCall("Tebex Checkout", "failed creating Tebex basket", $checkoutRequest, $e, $e->getResponseBody(), "", "");
-        //sendTriageEvent("Failed to create Tebex Checkout basket", $checkoutRequest); FIXME
+
+        $event = new PluginEvent($accountId, "ERROR", "failed creating Tebex basket");
+        $event = $event->withMetadata([
+            "request" => $checkoutRequest,
+            "response" => $e->getResponseBody()
+        ]);
+        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+        $event->send();
+
         return '<span style="color: red">Error! Failed to create Tebex basket. See module log.</span>';
     }
 
@@ -406,8 +415,10 @@ function tebexcheckout_refund($params)
         $refundedPayment = $paymentsApi->refundPaymentByID($transactionIdToRefund);
     } catch (TebexCheckout\ApiException $e) {
         logModuleCall("Tebex Checkout", "failed refunding payment", $payment, $e, $e->getResponseBody(), "", "");
-        //sendTriageEvent("Failed to create Tebex Checkout basket", $checkoutRequest); FIXME
-        return 'false';
+        sendPluginEvent($accountId, $whmcsVersion, "failed refunding payment", "ERROR");
+        return array(
+            'status' => 'error'
+        );
     }
     
     
@@ -478,22 +489,6 @@ function tebexcheckout_cancelSubscription($params)
         'status' => 'success',
         'rawdata' => $cancelSubResponse
     );
-}
-
-function sendTriageEvent($message, $trace, $metadata) {
-    $event = new TriageEvent();
-
-    $event->gameId = "WHMCS";
-    $event->frameworkId = "";
-    $event->pluginVersion = "2.0.0";
-    $event->serverIp = "";
-    $event->errorMessage = $message;
-    $event->trace = $trace;
-    $event->metadata = $metadata;
-    $event->storeName = "";
-    $event->storeUrl = "";
-
-    //FIXME
 }
 
 /**

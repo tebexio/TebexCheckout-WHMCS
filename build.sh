@@ -42,6 +42,4 @@ if [[ "$(pwd)" == "/var/www/html/modules/gateways/tebexcheckout" ]]; then
     echo "Installing gateway scripts to active WHMCS instance..."
     cp -r ./gateway/tebexcheckout.php ../
     cp -r ./callback/tebexcheckout.php ../callback/
-else
-    echo "You are not in the correct directory. Exiting..."
 fi

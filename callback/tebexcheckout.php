@@ -11,38 +11,38 @@
  */
 
 // Require libraries needed for gateway module functions.
-require_once __DIR__ . '/../../../../init.php';
-require_once __DIR__ . '/../../../../includes/gatewayfunctions.php';
-require_once __DIR__ . '/../../../../includes/invoicefunctions.php';
+require_once __DIR__ . '/../../../init.php';
+require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
+require_once __DIR__ . '/../../../includes/invoicefunctions.php';
 
-require_once __DIR__ . '/../../tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/HeaderSelector.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/ObjectSerializer.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Configuration.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/BasketsApi.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/ApiException.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/CheckoutApi.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/PaymentsApi.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/RecurringPaymentsApi.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/ModelInterface.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutRequest.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutRequestBasket.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/CreateBasketRequest.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/CheckoutItem.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/TebexWebhook.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/Package.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/Basket.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/PriceDetails.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/Address.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRow.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMeta.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMetaLimits.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketRowMetaLimitsUser.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/BasketLinks.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/PaymentSubject.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/PaymentSubjectProductsInner.php';
-require_once __DIR__ . '/../../tebexcheckout/lib/Model/RecurringPaymentSubject.php';
-
+require_once __DIR__ . '/../tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/HeaderSelector.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/ObjectSerializer.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Configuration.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/BasketsApi.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/ApiException.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/CheckoutApi.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/PaymentsApi.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/RecurringPaymentsApi.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/ModelInterface.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutRequest.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutRequestBasket.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CreateBasketRequest.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutItem.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/TebexWebhook.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Package.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Basket.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PriceDetails.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Address.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRow.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMeta.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimits.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimitsUser.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketLinks.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PaymentSubject.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PaymentSubjectProductsInner.php';
+require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/RecurringPaymentSubject.php';
+require_once __DIR__ . '/../tebexcheckout/lib/plugin-sdk/PluginEvent.php';
 
 use TebexCheckout\Model\Address;
 use TebexCheckout\Model\PriceDetails;
@@ -89,6 +89,16 @@ if ($incomingSignature != hash_hmac('sha256', hash('sha256', $json), $webhookSec
     $transactionStatus = 'Hash Verification Failure';
     $success = false;
     echo "Hash Verification Failure - Check Webhook Secret Key ";
+    
+    $event = new PluginEvent($gatewayParams['accountId'], "WARNING", "Hash verification failure");
+    $event = $event->withMetadata([
+        "incomingSignature" => $incomingSignature,
+        "incomingJson" => $json,
+    ]);
+    
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+    $event->send();
+
     return $success;
 }
 
@@ -118,6 +128,9 @@ $webhook = new TebexWebhook([
 if ($webhook->getType() == "validation.webhook") {
     // Validation webhook wants us to return the ID in a json format to confirm the endpoint works
     echo json_encode(["id" => $webhook->getId()]);
+    $event = new PluginEvent($gatewayParams['accountId'], "INFO", "Validation success");
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+    $event->send();
     return;
 }
 
@@ -159,12 +172,16 @@ if (str_contains($webhook->getType(), "recurring-payment.")) {
                     'subscriptionid' => $recurringWebhookSubject->getReference(),
                 ]);
             } else { // unrecognized product type is being sent with a subscription payment, should be a hosting or a addon.
-                logModuleCall("Tebex Checkout", "successfully created Tebex basket", $checkoutRequest, $checkoutBasket, $checkoutBasket, "", "");
+                logModuleCall("Tebex Checkout", "unrecognized product type for subscription. supported products are 'hosting' and 'addon'.", $webhook, $subject, $subject, "", "");
                 echo json_encode([
                     "success" => false,
-                    "message" => "Could not find relid `" . $recurringProductRelid . "`" . " of type " . $recurringProductType
+                    "message" => "unrecognized product type for subscription '" . $recurringProductType . "' supported products are 'hosting' and 'addon'"
                 ]);
                 http_response_code(400);
+
+                $event = new PluginEvent($gatewayParams['accountId'], "ERROR", "unrecognized product type for subscription: " . $recurringProductType);                
+                $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+                $event->send();
                 return;
             }
         }
@@ -177,7 +194,7 @@ if (str_contains($webhook->getType(), "recurring-payment.")) {
             "success" => false,
             "message" => "Unsupported webhook type: " . $webhook->getType()
         ]);
-        http_response_code(400);    
+        http_response_code(400);
     }
 } else if (str_contains($webhook->getType(), "payment.")) {
     // Handle payment notification webhooks, we need to update the paid invoice to have a status of Paid.
