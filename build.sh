@@ -19,7 +19,7 @@ mkdir .build/tebexcheckout
 cp -r lib .build/tebexcheckout/
 cp -r vendor .build/tebexcheckout/
 cp ./logo.png .build/tebexcheckout/logo.png
-cp ./README.md .build/tebexcheckout/README.md
+echo "To install Tebex Checkout, place the files you see here in your /modules/gateways folder." >> .build/README.txt
 cp ./whmcs.json .build/tebexcheckout/whmcs.json
 
 # Copy callback module
@@ -35,6 +35,7 @@ sed -i "s/\%VERSION%/$VERSION/g" .build/tebexcheckout.php
 # Create the zip
 cd .build
 zip -r TebexCheckout-WHMCS-$VERSION.zip *
+rm -f README.txt
 cd ..
 
 # if in dev, copy the repo files to their install locations
