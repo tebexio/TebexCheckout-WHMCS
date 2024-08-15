@@ -171,11 +171,13 @@ if (str_contains($webhook->getType(), "recurring-payment.")) {
                 Capsule::table('tblhostingaddons')->where('id', '=', intval($recurringProductRelid))->update([
                     'subscriptionid' => $recurringWebhookSubject->getReference(),
                 ]);
+            } else if ($recurringProductType == "lineitem") {
+                //NOOP support for lineitems included with subscription items
             } else { // unrecognized product type is being sent with a subscription payment, should be a hosting or a addon.
-                logModuleCall("Tebex Checkout", "unrecognized product type for subscription. supported products are 'hosting' and 'addon'.", $webhook, $subject, $subject, "", "");
+                logModuleCall("Tebex Checkout", "unrecognized product type for subscription. supported products are 'hosting', 'addon', and 'lineitem'.", $webhook, $subject, $subject, "", "");
                 echo json_encode([
                     "success" => false,
-                    "message" => "unrecognized product type for subscription '" . $recurringProductType . "' supported products are 'hosting' and 'addon'"
+                    "message" => "unrecognized product type for subscription '" . $recurringProductType . "' supported products are 'hosting', 'addon', and 'lineitem'"
                 ]);
                 http_response_code(400);
 
