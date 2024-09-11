@@ -32,6 +32,7 @@ Installation and Setup
 2. Download the latest version of the Tebex Checkout gateway for WHMCS
 3. Unzip Tebex Checkout in `modules/gateways`
 4. Create a webhook endpoint for your callbacks after payment: https://creator.tebex.io/webhooks/endpoints
+   - Use the following endpoint: `https://[your WHMCS server address]/modules/gateways/callback/tebexcheckout.php`
 5. Enabled Tebex Checkout as a payment gateway in WHMCS
 6. Add your store’s API keys and webhook secret keys to Tebex Checkout’s configuration
 
