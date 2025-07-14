@@ -474,7 +474,7 @@ function _addHostingCheckoutItem($invoiceItem, $hostingObject, $checkoutItems, $
 
     // add the recurring portion to the basket
     $recurringHostingPackage = Checkout\PackageBuilder::new()
-        ->name($invoiceItem["description"])
+        ->name(mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
         ->price(floatval($hostingObject->amount))
         ->expiryLength($expiry_length)->expiryPeriod($expiry_period)
         ->custom([
@@ -496,7 +496,7 @@ function _addAddonCheckoutItem($invoiceItem, $addonObject, $checkoutItems, $allo
     if ($addonObject->setupfee != 0.00) {
         // when we have a setup fee, split into one package for the single fee and the other for the recurring portion
         $oneTimeSetupFeePackage = Checkout\PackageBuilder::new()
-            ->name("One Time Setup Fee - " . $invoiceItem["description"])
+            ->name("One Time Setup Fee - " . mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
             ->price(floatval($addonObject->setupfee))
             ->custom([
                 "relid" => $invoiceItem["relid"],
@@ -538,7 +538,7 @@ function _addAddonCheckoutItem($invoiceItem, $addonObject, $checkoutItems, $allo
     }
 
     $addonPackage = Checkout\PackageBuilder::new()
-        ->name($invoiceItem["description"])
+        ->name(mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
         ->price(floatval($addonObject->recurring))
         ->expiryPeriod($expiry_period)->expiryLength($expiry_length)
         ->type($payment_type)->qty(1)
