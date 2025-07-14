@@ -40,6 +40,12 @@ class StreamHandler
             \usleep($options['delay'] * 1000);
         }
 
+        $protocolVersion = $request->getProtocolVersion();
+
+        if ('1.0' !== $protocolVersion && '1.1' !== $protocolVersion) {
+            throw new ConnectException(sprintf('HTTP/%s is not supported by the stream handler.', $protocolVersion), $request);
+        }
+
         $startTime = isset($options['on_stats']) ? Utils::currentTime() : null;
 
         try {
@@ -83,8 +89,8 @@ class StreamHandler
         array $options,
         RequestInterface $request,
         ?float $startTime,
-        ResponseInterface $response = null,
-        \Throwable $error = null
+        ?ResponseInterface $response = null,
+        ?\Throwable $error = null
     ): void {
         if (isset($options['on_stats'])) {
             $stats = new TransferStats($request, $response, Utils::currentTime() - $startTime, $error, []);
@@ -273,7 +279,7 @@ class StreamHandler
 
         // HTTP/1.1 streams using the PHP stream wrapper require a
         // Connection: close header
-        if ($request->getProtocolVersion() == '1.1'
+        if ($request->getProtocolVersion() === '1.1'
             && !$request->hasHeader('Connection')
         ) {
             $request = $request->withHeader('Connection', 'close');
@@ -578,7 +584,7 @@ class StreamHandler
         static $args = ['severity', 'message', 'message_code', 'bytes_transferred', 'bytes_max'];
 
         $value = Utils::debugResource($value);
-        $ident = $request->getMethod().' '.$request->getUri()->withFragment('');
+        $ident = $request->getMethod() . ' StreamHandler.php' .$request->getUri()->withFragment('');
         self::addNotification(
             $params,
             static function (int $code, ...$passed) use ($ident, $value, $map, $args): void {

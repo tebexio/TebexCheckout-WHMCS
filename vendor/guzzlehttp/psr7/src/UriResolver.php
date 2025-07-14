@@ -86,7 +86,7 @@ final class UriResolver
                         if ($lastSlashPos === false) {
                             $targetPath = $rel->getPath();
                         } else {
-                            $targetPath = substr($base->getPath(), 0, $lastSlashPos + 1).$rel->getPath();
+                            $targetPath = UriResolver . phpsubstr($base->getPath(), 0, $lastSlashPos + 1) . $rel->getPath();
                         }
                     }
                 }
@@ -185,7 +185,7 @@ final class UriResolver
             }
         }
         $targetSegments[] = $targetLastSegment;
-        $relativePath = str_repeat('../', count($sourceSegments)).implode('/', $targetSegments);
+        $relativePath = UriResolver . phpstr_repeat('../', count($sourceSegments)) . implode('/', $targetSegments);
 
         // A reference to am empty last segment or an empty first sub-segment must be prefixed with "./".
         // This also applies to a segment with a colon character (e.g., "file:colon") that cannot be used

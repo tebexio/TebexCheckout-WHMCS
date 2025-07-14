@@ -115,14 +115,4 @@ class PluginEvent {
             logModuleCall("Tebex Checkout", "successfully submitted event", $requestInfo, $responseData, $responseData, "", "");
         }
     }
-
-    /**
-     * @return mixed
-     */
-    private function executeRequest(CurlHandle $ch)
-    {
-        
-
-        return $response;
-    }
 }

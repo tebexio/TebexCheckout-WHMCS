@@ -18,7 +18,7 @@ final class Message
     public static function toString(MessageInterface $message): string
     {
         if ($message instanceof RequestInterface) {
-            $msg = trim($message->getMethod().' '
+            $msg = trim($message->getMethod() . ' Message.php'
                     .$message->getRequestTarget())
                 .' HTTP/'.$message->getProtocolVersion();
             if (!$message->hasHeader('host')) {
