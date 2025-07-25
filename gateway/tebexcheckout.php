@@ -24,59 +24,31 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
-require_once __DIR__ . '/tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/HeaderSelector.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/ObjectSerializer.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Configuration.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/BasketsApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/PaymentsApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/ApiException.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/CheckoutApi.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/ModelInterface.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutRequest.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutRequestBasket.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CreateBasketRequest.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/CheckoutItem.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Package.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Basket.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PriceDetails.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Address.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRow.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMeta.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimits.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimitsUser.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/BasketLinks.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/Payment.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentStatus.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentPrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFees.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFeesTax.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentFeesGateway.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentCustomer.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInner.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInnerBasePrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/PaymentProductsInnerPaidPrice.php';
-require_once __DIR__ . '/tebexcheckout/lib/checkout-sdk/Model/RecurringPayment.php';
-require_once __DIR__ . '/tebexcheckout/lib/plugin-sdk/PluginEvent.php';
+// composer autoload
+require_once __DIR__ . '/tebexcheckout/vendor/autoload.php';
 
-
-use TebexCheckout\Model\Address;
-use TebexCheckout\Model\PriceDetails;
-use TebexCheckout\Model\Basket;
-use TebexCheckout\Model\BasketRow;
+use Tebex\Checkout;
 use TebexCheckout\Model\CheckoutItem;
-use TebexCheckout\Model\CheckoutRequest;
-use TebexCheckout\Model\CheckoutRequestBasket;
-use TebexCheckout\Model\CreateBasketRequest;
 use TebexCheckout\Model\Package;
-use TebexCheckout\Model\PaymentStatus;
-use TebexCheckout\Model\PaymentPrice;
-use TebexCheckout\TebexCheckout\BasketsApi;
-use TebexCheckout\TebexCheckout\CheckoutApi;
-use TebexCheckout\TebexCheckout\PaymentsApi;
-use TebexCheckout\TebexCheckout\RecurringPaymentsApi;
-use GuzzleHttp\Psr7\Utils;
+use TebexCheckout\Model\Sale;
 use WHMCS\Database\Capsule;
+
+/**
+ * WHMCS helper functions
+ */
+function moduleLog(string $action, mixed $request, mixed $response) {
+    /**
+     * Log module call.
+     *
+     * @param string $module The name of the module
+     * @param string $action The name of the action being performed
+     * @param string|array $requestString The input parameters for the API call
+     * @param string|array $responseData The response data from the API call
+     * @param string|array $processedData The resulting data after any post processing (eg. json decode, xml decode, etc...)
+     * @param array $replaceVars An array of strings for replacement
+     */
+    logModuleCall("Tebex Checkout", $action, $request, $response, $response, []);
+}
 
 /**
  * Define module related meta data.
@@ -233,31 +205,22 @@ function tebexcheckout_link($params)
     $postfields['callback_url'] = $systemUrl . '/modules/gateways/callback/' . $moduleName . '.php';
     $postfields['return_url'] = $returnUrl;
 
-    $apiAuthConfig = TebexCheckout\Configuration::getDefaultConfiguration()
-              ->setUsername($accountId)
-              ->setPassword($apiKey);
-
-    // Init new basket
-    $apiInstance = new BasketsApi(
-        new GuzzleHttp\Client(), $apiAuthConfig
-    );
-
-    $tebexBasket = new CheckoutRequestBasket([
-        "return_url" => $returnUrl,
-        "complete_url" => $returnUrl,
-        "first_name" =>$firstname,
-        "last_name" => $lastname,
-        "email" => $email,
-        "custom" => [
+    Checkout::setApiKeys($accountId, $apiKey);
+    $basket = Checkout\BasketBuilder::new()
+        ->email($email)
+        ->firstname($firstname)->lastname($lastname)
+        ->country($country)
+        ->returnUrl($returnUrl)->completeUrl($returnUrl)
+        ->custom([ // provided via webhook to mark invoice as paid
             "invoiceId" => $invoiceId
-        ],
-    ]);
+        ])->build();
 
     $checkoutItems = [];
     $sale = null;
 
     // Build a list of basket items for checkout based on the items on the invoice.
     $invoiceItems = localAPI("GetInvoice", ["invoiceid" => $invoiceId])["items"]["item"];
+    $salePrice = 0;
     foreach ($invoiceItems as $item) {
         // Look up and add items by type to the basket
         if ($item["type"] == "Hosting") {
@@ -267,17 +230,23 @@ function tebexcheckout_link($params)
             $addon = Capsule::table("tblhostingaddons")->where("id", $item["relid"])->first();
             $checkoutItems = _addAddonCheckoutItem($item, $addon, $checkoutItems, $allowSubscriptions);
         } else { // all other line items are considered ad hoc and billed directly as a single payment
-            $checkoutPackage = new Package([
-                "name" => $item["description"],
-                "price" => floatval($item["amount"]),
-                "custom" => [
+            $price = floatval($item["amount"]);
+            $checkoutPackage = Checkout\PackageBuilder::new()
+                ->name($item["description"])
+                ->price($price)
+                ->custom([
                     "relid" => $item["relid"],
-                    "type" => "lineitem"
-                ],
-                "type" => "single",
-                "quantity" => 1
-            ]);
-    
+                ])
+                ->oneTime()
+                ->qty(1)->build();
+
+            // if the price of the line item is negative, we count it towards a sale applied to the basket
+            if ($price < 0) {
+                $salePrice += abs($price);
+                // set price to 0 to propagate the package through, but the sale will apply the discount
+                $checkoutPackage->setPrice(0);
+            }
+
             $checkoutItem = new CheckoutItem([
                 'package' => $checkoutPackage
             ]);
@@ -285,39 +254,30 @@ function tebexcheckout_link($params)
         }
     }
 
-    // Create the basket using a checkout request - the response will contain the payment link to display to the customer
-    $checkoutRequest = new CheckoutRequest(
-        [
-            "basket" => $tebexBasket,
-            "items" => $checkoutItems
-            // an optional "sale" parameter is not provided here because sales in WHMCS are negative line items that are already handled by Tebex Checkout
-        ],
-    );
+    // create the sale if we calculated negative line items
+    if ($salePrice > 0) {
+        $sale = new Sale([
+            "name" => "Discounted Items",
+            "discount_type" => "amount",
+            "amount" => $salePrice,
+        ]);
+    }
 
-    $checkoutInstance = new CheckoutApi(new GuzzleHttp\Client(), $apiAuthConfig);
+    // Create the basket using a checkout request - the response will contain the payment link to display to the customer
     $checkoutBasket = null;
     try {
-        $checkoutBasket = $checkoutInstance->checkout($checkoutRequest);
-        /**
-         * Log module call.
-         *
-         * @param string $module The name of the module
-         * @param string $action The name of the action being performed
-         * @param string|array $requestString The input parameters for the API call
-         * @param string|array $responseData The response data from the API call
-         * @param string|array $processedData The resulting data after any post processing (eg. json decode, xml decode, etc...)
-         * @param array $replaceVars An array of strings for replacement
-         */
-        logModuleCall("Tebex Checkout", "successfully created Tebex basket", $checkoutRequest, $checkoutBasket, $checkoutBasket, "", "");
+        $checkoutBasket = Checkout::checkoutRequest($basket, $checkoutItems, $sale);
+        moduleLog("created Tebex basket", [$basket, $checkoutItems], $checkoutBasket);
     } catch (TebexCheckout\ApiException $e) {
-        logModuleCall("Tebex Checkout", "failed creating Tebex basket", $checkoutRequest, $e, $e->getResponseBody(), "", "");
+        moduleLog("failed creating Tebex basket", [$basket, $checkoutItems], $e->getResponseBody());
 
         $event = new PluginEvent($accountId, "ERROR", "failed creating Tebex basket");
         $event = $event->withMetadata([
-            "request" => $checkoutRequest,
+            "request_basket" => $checkoutBasket,
+            "request_items" => $checkoutItems,
             "response" => $e->getResponseBody()
         ]);
-        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
         $event->send();
 
         return '<span style="color: red">Error! Failed to create Tebex basket. See module log.</span>';
@@ -326,7 +286,7 @@ function tebexcheckout_link($params)
     // successful response contains a checkout link
     $links = $checkoutBasket->getLinks();
 
-    // Add payment link as action target for our payment form
+    // add payment link as action target for our payment form
     $htmlOutput = '<form method="get" action="' . $links->getCheckout() . '">';
 
     // Tebex Logo
@@ -388,21 +348,12 @@ function tebexcheckout_refund($params)
     $moduleName = $params['paymentmethod'];
     $whmcsVersion = $params['whmcsVersion'];
 
-    $apiAuthConfig = TebexCheckout\Configuration::getDefaultConfiguration()
-        ->setUsername($accountId)
-        ->setPassword($apiKey);
-
-    $paymentsApi = new PaymentsApi(
-        new GuzzleHttp\Client(), $apiAuthConfig
-    );
-
+    Checkout::setApiKeys($accountId, $apiKey);
     try{
         // look up the payment
-        $payment = $paymentsApi->getPaymentById($transactionIdToRefund);
-        
-        // if the payment is already refunded on Tebex side mark the invoice refunded
-        if ($payment->getStatus()["description"] == "Refund") {
-            logModuleCall("Tebex Checkout", "api refund - already refunded", $transactionIdToRefund, $payment, $refundedPayment, "", "");
+        $payment = Checkout::getPayment($transactionIdToRefund);
+        if (Checkout::isPaymentRefunded($payment)) {
+            moduleLog("api refund - already refunded", $transactionIdToRefund, $payment);
             return array(
                 'status' => 'success',
                 'rawdata' => $payment,
@@ -411,19 +362,24 @@ function tebexcheckout_refund($params)
             );
         }
 
-        // otherwise process a new refund
-        $refundedPayment = $paymentsApi->refundPaymentByID($transactionIdToRefund);
+        // otherwise process a new refund TODO partial refund?
+        $refundedPayment = Checkout::refundPayment($transactionIdToRefund);
     } catch (TebexCheckout\ApiException $e) {
-        logModuleCall("Tebex Checkout", "failed refunding payment", $payment, $e, $e->getResponseBody(), "", "");
-        sendPluginEvent($accountId, $whmcsVersion, "failed refunding payment", "ERROR");
+        moduleLog("failed refunding payment", $payment, $e->getResponseBody());
+        $event = new PluginEvent($accountId, "ERROR", "failed refunding payment");
+        $event = $event->withMetadata([
+            "request_transaction_id" => $transactionIdToRefund,
+            "response" => $e->getResponseBody()
+        ]);
+        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
+        $event->send();
         return array(
             'status' => 'error'
         );
     }
-    
-    
-    logModuleCall("Tebex Checkout", "api refund - new refund", $transactionIdToRefund, $refundedPayment, $refundedPayment, "", "");
-    if ($refundedPayment->getStatus()["description"] == "Refund") {
+
+    moduleLog("api refund - new refund", $transactionIdToRefund, $refundedPayment);
+    if (Checkout::isPaymentRefunded($refundedPayment)) {
         return array(
             'status' => 'success',
             'rawdata' => $refundedPayment,
@@ -474,20 +430,13 @@ function tebexcheckout_cancelSubscription($params)
     $moduleName = $params['paymentmethod'];
     $whmcsVersion = $params['whmcsVersion'];
 
-    $apiAuthConfig = TebexCheckout\Configuration::getDefaultConfiguration()
-        ->setUsername($accountId)
-        ->setPassword($apiKey);
-
-    $recurringPaymentsApi = new RecurringPaymentsApi(
-        new GuzzleHttp\Client(), $apiAuthConfig
-    );
-
-    $cancelSubResponse = $recurringPaymentsApi->cancelRecurringPayment($subscriptionIdToCancel);
-    logModuleCall("Tebex Checkout", "api subscription cancel", $subscriptionIdToCancel, $cancelSubResponse, $cancelSubResponse, "", "");
+    Checkout::setApiKeys($accountId, $apiKey);
+    $cancelledPayment = Checkout::cancelRecurringPayment($subscriptionIdToCancel);
+    moduleLog("api subscription cancel", $subscriptionIdToCancel, $cancelledPayment);
 
     return array(
         'status' => 'success',
-        'rawdata' => $cancelSubResponse
+        'rawdata' => $cancelledPayment
     );
 }
 
@@ -546,18 +495,16 @@ function _addHostingCheckoutItem($invoiceItem, $hostingObject, $checkoutItems, $
     }
 
     // add the recurring portion to the basket
-    $recurringHostingPackage = new Package([
-        "name" => $invoiceItem["description"],
-        "price" => floatval($hostingObject->amount),
-        "expiry_period" => $expiry_period,
-        "expiry_length" => $expiry_length,
-        "custom" => [
+    $recurringHostingPackage = Checkout\PackageBuilder::new()
+        ->name(mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
+        ->price(floatval($hostingObject->amount))
+        ->expiryLength($expiry_length)->expiryPeriod($expiry_period)
+        ->custom([
             "relid" => $invoiceItem["relid"],
             "type" => "hosting"
-        ],
-        "type" => $payment_type,
-        "quantity" => 1
-    ]);
+        ])
+        ->type($payment_type)
+        ->qty(1)->build();
 
     $hostingCheckoutItem = new CheckoutItem([
         'package' => $recurringHostingPackage
@@ -570,16 +517,14 @@ function _addHostingCheckoutItem($invoiceItem, $hostingObject, $checkoutItems, $
 function _addAddonCheckoutItem($invoiceItem, $addonObject, $checkoutItems, $allowSubscriptions) {
     if ($addonObject->setupfee != 0.00) {
         // when we have a setup fee, split into one package for the single fee and the other for the recurring portion
-        $oneTimeSetupFeePackage = new Package([
-            "name" => "One Time Setup Fee - " . $invoiceItem["description"],
-            "price" => floatval($addonObject->setupfee),
-            "custom" => [
+        $oneTimeSetupFeePackage = Checkout\PackageBuilder::new()
+            ->name("One Time Setup Fee - " . mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
+            ->price(floatval($addonObject->setupfee))
+            ->custom([
                 "relid" => $invoiceItem["relid"],
-                "type" => "setupfee"
-            ],
-            "type" => "single",
-            "quantity" => 1
-        ]);
+                "type" => "addon"
+            ])
+            ->oneTime()->qty(1)->build();
         array_push($checkoutItems, new CheckoutItem(['package' => $oneTimeSetupFeePackage]));
     }
 
@@ -614,18 +559,15 @@ function _addAddonCheckoutItem($invoiceItem, $addonObject, $checkoutItems, $allo
         $payment_type = "single";
     }
 
-    $addonPackage = new Package([
-        "name" => $invoiceItem["description"],
-        "price" => floatval($addonObject->recurring),
-        "expiry_period" => $expiry_period,
-        "expiry_length" => $expiry_length,
-        "custom" => [
+    $addonPackage = Checkout\PackageBuilder::new()
+        ->name(mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))
+        ->price(floatval($addonObject->recurring))
+        ->expiryPeriod($expiry_period)->expiryLength($expiry_length)
+        ->type($payment_type)->qty(1)
+        ->custom([
             "relid" => $invoiceItem["relid"],
             "type" => "addon"
-        ],
-        "type" => $payment_type,
-        "quantity" => 1
-    ]);
+        ])->build();
 
     $addonCheckoutItem = new CheckoutItem([
         'package' => $addonPackage

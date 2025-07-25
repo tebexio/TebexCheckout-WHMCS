@@ -15,53 +15,8 @@ require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';
 require_once __DIR__ . '/../../../includes/invoicefunctions.php';
 
-require_once __DIR__ . '/../tebexcheckout/vendor/guzzlehttp/psr7/src/Query.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/HeaderSelector.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/ObjectSerializer.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Configuration.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/BasketsApi.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/ApiException.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/CheckoutApi.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/PaymentsApi.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/RecurringPaymentsApi.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/ModelInterface.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutRequest.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutRequestBasket.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CreateBasketRequest.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/CheckoutItem.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/TebexWebhook.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Package.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Basket.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PriceDetails.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/Address.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRow.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMeta.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimits.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketRowMetaLimitsUser.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/BasketLinks.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PaymentSubject.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/PaymentSubjectProductsInner.php';
-require_once __DIR__ . '/../tebexcheckout/lib/checkout-sdk/Model/RecurringPaymentSubject.php';
-require_once __DIR__ . '/../tebexcheckout/lib/plugin-sdk/PluginEvent.php';
-
-use TebexCheckout\Model\Address;
-use TebexCheckout\Model\PriceDetails;
-use TebexCheckout\Model\Basket;
-use TebexCheckout\Model\BasketRow;
-use TebexCheckout\Model\CheckoutItem;
-use TebexCheckout\Model\CheckoutRequest;
-use TebexCheckout\Model\CheckoutRequestBasket;
-use TebexCheckout\Model\CreateBasketRequest;
-use TebexCheckout\Model\Package;
-use TebexCheckout\Model\TebexWebhook;
-use TebexCheckout\TebexCheckout\BasketsApi;
-use TebexCheckout\TebexCheckout\CheckoutApi;
-use TebexCheckout\TebexCheckout\PaymentsApi;
-use TebexCheckout\TebexCheckout\RecurringPaymentsApi;
-use TebexCheckout\Model\PaymentSubjectProductsInner;
+use Tebex\Webhook\Webhook;
 use TebexCheckout\Model\PaymentSubject;
-use TebexCheckout\Model\RecurringPaymentSubject;
-use GuzzleHttp\Psr7\Utils;
 use WHMCS\Database\Capsule;
 
 // Detect module name from filename.
@@ -82,10 +37,17 @@ if (!$gatewayParams['type']) {
  * originated from them. In the case of our example here, this is achieved by
  * way of a shared secret which is used to build and compare a hash.
  */
-$webhookSecretKey = $gatewayParams['webhookSecretKey'];
-$json = file_get_contents('php://input');
+use Tebex\Webhooks;
+use Tebex\Plugin\PluginEvent;
+use const Tebex\Webhook\PAYMENT_COMPLETED;
+use const Tebex\Webhook\RECURRING_PAYMENT_ENDED;
+use const Tebex\Webhook\RECURRING_PAYMENT_STARTED;
+
 $incomingSignature = $_SERVER['HTTP_X_SIGNATURE'];
-if ($incomingSignature != hash_hmac('sha256', hash('sha256', $json), $webhookSecretKey)) {
+$json = file_get_contents('php://input');
+Webhooks::setSecretKey($gatewayParams['webhookSecretKey']);
+$debug = true;
+if (!Webhooks::validateWebhookSignature($incomingSignature, $json) && !$debug) {
     $transactionStatus = 'Hash Verification Failure';
     $success = false;
     echo "Hash Verification Failure - Check Webhook Secret Key ";
@@ -96,13 +58,22 @@ if ($incomingSignature != hash_hmac('sha256', hash('sha256', $json), $webhookSec
         "incomingJson" => $json,
     ]);
     
-    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
     $event->send();
 
     return $success;
 }
 
-$webhookDecodedJson = json_decode($json, true);
+// Validation webhook wants us to return the ID in a json format to confirm the endpoint works
+$webhook = Webhook::fromJson($json);
+if ($webhook->isType(\Tebex\Webhook\VALIDATION_WEBHOOK)) {
+    echo json_encode(["id" => $webhook->getId()]);
+
+    $event = new PluginEvent($gatewayParams['accountId'], "INFO", "Validation success");
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+    $event->send();
+    return;
+}
 
 /**
  * Log Transaction.
@@ -116,91 +87,65 @@ $webhookDecodedJson = json_decode($json, true);
  * @param string|array $debugData    Data to log
  * @param string $transactionStatus  Status
  */
-logTransaction($gatewayParams['name'], $json, $webhookDecodedJson["type"]);
+logTransaction($gatewayParams['name'], $json, $webhook->getType());
 
-$webhook = new TebexWebhook([
-    "id" => $webhookDecodedJson["id"],
-    "type" => $webhookDecodedJson["type"],
-    "date" => $webhookDecodedJson["date"],
-    "subject" =>$webhookDecodedJson["subject"]
-]);
+if ($webhook->isTypeOfRecurringPayment()) {
+    // Add subscription ID to a recurring payment product if applicable
 
-if ($webhook->getType() == "validation.webhook") {
-    // Validation webhook wants us to return the ID in a json format to confirm the endpoint works
-    echo json_encode(["id" => $webhook->getId()]);
-    $event = new PluginEvent($gatewayParams['accountId'], "INFO", "Validation success");
-    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
-    $event->send();
-    return;
+    switch ($webhook->getType()) {
+        case RECURRING_PAYMENT_STARTED:
+            $subject = $webhook->getSubject();
+            $lastPayment = new PaymentSubject($subject->getLastPayment());
+
+            // identify the internal WHMCS product associated with the subscription and apply our subscription id
+            $products = $lastPayment->getProducts();
+            foreach ($products as $paidProduct) {
+                $recurringProductType = $paidProduct["custom"]["type"]; // hosting, addon, etc. included when we built the initial basket for the invoice
+                $recurringProductRelid = $paidProduct["custom"]["relid"];
+
+                if ($recurringProductType == "hosting") {
+                    Capsule::table('tblhosting')->where('id', '=', intval($recurringProductRelid))->update([
+                        'subscriptionid' => $subject->getReference(),
+                    ]);
+                } else if ($recurringProductType == "addon") {
+                    Capsule::table('tblhostingaddons')->where('id', '=', intval($recurringProductRelid))->update([
+                        'subscriptionid' => $subject->getReference(),
+                    ]);
+                } else if ($recurringProductType == "lineitem") {
+                    //NOOP support for lineitems included with subscription items
+                } else { // unrecognized product type is being sent with a subscription payment, should be a hosting or a addon.
+                    logModuleCall("Tebex Checkout", "unrecognized product type for subscription. supported products are 'hosting', 'addon', and 'lineitem'.", $webhook, $subject, $subject, "", "");
+                    echo json_encode([
+                        "success" => false,
+                        "message" => "unrecognized product type for subscription '" . $recurringProductType . "' supported products are 'hosting', 'addon', and 'lineitem'"
+                    ]);
+                    http_response_code(400);
+
+                    $event = new PluginEvent($gatewayParams['accountId'], "ERROR", "unrecognized product type for subscription: " . $recurringProductType);
+                    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+                    $event->send();
+                    return;
+                }
+            }
+
+            $paymentType = $lastPayment->getProducts();
+            $paymentRelid = $lastPayment->getProducts()[0]["custom"]["relid"];
+            break;
+        case RECURRING_PAYMENT_ENDED:
+            //TODO
+            break;
+        default:
+            echo json_encode([
+                "success" => false,
+                "message" => "Unsupported recurring webhook type: " . $webhook->getType()
+            ]);
+            http_response_code(400);
+    }
 }
 
-if (str_contains($webhook->getType(), "recurring-payment.")) {
-    // Add subscription ID to a recurring payment product if applicable
-    $recurringSubject = new RecurringPaymentSubject($webhook->getSubject());
-    
-    if ($webhook->getType() == "recurring-payment.started") {
-        $subject = $webhook->getSubject();
-        $recurringWebhookSubject = new RecurringPaymentSubject([
-            'reference' => $subject["reference"],
-            'created_at' => $subject["created_at"],
-            'paused_at' => $subject["paused_at"],
-            'paused_until' => $subject["paused_until"],
-            'next_payment_at' => $subject["next_payment_at"],
-            'status' => $subject["status"],
-            'initial_payment' => new PaymentSubject($subject["initial_payment"]),
-            'last_payment' => new PaymentSubject($subject["last_payment"]),
-            'fail_count' => $subject["fail_count"],
-            'price' => $subject["price"],
-            'cancelled_at' => $subject["cancelled_at"],
-            'cancel_reason' => $subject["cancel_reason"]
-        ]);
-
-        $lastPayment = new PaymentSubject($recurringSubject->getLastPayment());
-        
-        // identify the internal WHMCS product associated with the subscription and apply our subscription id
-        $products = $lastPayment->getProducts();
-        foreach ($products as $paidProduct) {
-            $recurringProductType = $paidProduct["custom"]["type"]; // hosting, addon, etc. included when we built the initial basket for the invoice
-            $recurringProductRelid = $paidProduct["custom"]["relid"];
-
-            if ($recurringProductType == "hosting") {
-                Capsule::table('tblhosting')->where('id', '=', intval($recurringProductRelid))->update([
-                    'subscriptionid' => $recurringWebhookSubject->getReference(),
-                ]);
-            } else if ($recurringProductType == "addon") {
-                Capsule::table('tblhostingaddons')->where('id', '=', intval($recurringProductRelid))->update([
-                    'subscriptionid' => $recurringWebhookSubject->getReference(),
-                ]);
-            } else if ($recurringProductType == "lineitem") {
-                //NOOP support for lineitems included with subscription items
-            } else { // unrecognized product type is being sent with a subscription payment, should be a hosting or a addon.
-                logModuleCall("Tebex Checkout", "unrecognized product type for subscription. supported products are 'hosting', 'addon', and 'lineitem'.", $webhook, $subject, $subject, "", "");
-                echo json_encode([
-                    "success" => false,
-                    "message" => "unrecognized product type for subscription '" . $recurringProductType . "' supported products are 'hosting', 'addon', and 'lineitem'"
-                ]);
-                http_response_code(400);
-
-                $event = new PluginEvent($gatewayParams['accountId'], "ERROR", "unrecognized product type for subscription: " . $recurringProductType);                
-                $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
-                $event->send();
-                return;
-            }
-        }
-
-        $paymentType = $lastPayment->getProducts();
-        $paymentRelid = $lastPayment->getProducts()[0]["custom"]["relid"];
-        
-    } else { // unrecognized recurring payment webhook
-        echo json_encode([
-            "success" => false,
-            "message" => "Unsupported webhook type: " . $webhook->getType()
-        ]);
-        http_response_code(400);
-    }
-} else if (str_contains($webhook->getType(), "payment.")) {
+else if ($webhook->isType(PAYMENT_COMPLETED)) {
     // Handle payment notification webhooks, we need to update the paid invoice to have a status of Paid.
-    $paymentSubject = new PaymentSubject($webhook->getSubject());
+    $paymentSubject = $webhook->getSubject();
 
     $invoiceId = $paymentSubject->getCustom()["invoiceId"];
     $transactionId = $paymentSubject->getTransactionId();
@@ -258,7 +203,11 @@ if (str_contains($webhook->getType(), "recurring-payment.")) {
             $gatewayModuleName
         );
     }
-} else { // Handle unrecognized webhooks
+
+    http_response_code(200);
+}
+
+else { // Handle unrecognized webhooks
     echo json_encode([
         "success" => false,
         "message" => "Unsupported webhook type: " . $webhook->getType()
