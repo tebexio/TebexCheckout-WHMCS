@@ -24,9 +24,13 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
+// composer autoload
+require_once __DIR__ . '/tebexcheckout/vendor/autoload.php';
+
 use Tebex\Checkout;
 use TebexCheckout\Model\CheckoutItem;
 use TebexCheckout\Model\Package;
+use TebexCheckout\Model\Sale;
 use WHMCS\Database\Capsule;
 
 /**
@@ -216,6 +220,7 @@ function tebexcheckout_link($params)
 
     // Build a list of basket items for checkout based on the items on the invoice.
     $invoiceItems = localAPI("GetInvoice", ["invoiceid" => $invoiceId])["items"]["item"];
+    $salePrice = 0;
     foreach ($invoiceItems as $item) {
         // Look up and add items by type to the basket
         if ($item["type"] == "Hosting") {
@@ -225,14 +230,22 @@ function tebexcheckout_link($params)
             $addon = Capsule::table("tblhostingaddons")->where("id", $item["relid"])->first();
             $checkoutItems = _addAddonCheckoutItem($item, $addon, $checkoutItems, $allowSubscriptions);
         } else { // all other line items are considered ad hoc and billed directly as a single payment
+            $price = floatval($item["amount"]);
             $checkoutPackage = Checkout\PackageBuilder::new()
                 ->name($item["description"])
-                ->price(floatval($item["amount"]))
+                ->price($price)
                 ->custom([
                     "relid" => $item["relid"],
                 ])
                 ->oneTime()
                 ->qty(1)->build();
+
+            // if the price of the line item is negative, we count it towards a sale applied to the basket
+            if ($price < 0) {
+                $salePrice += abs($price);
+                // set price to 0 to propagate the package through, but the sale will apply the discount
+                $checkoutPackage->setPrice(0);
+            }
 
             $checkoutItem = new CheckoutItem([
                 'package' => $checkoutPackage
@@ -241,10 +254,19 @@ function tebexcheckout_link($params)
         }
     }
 
+    // create the sale if we calculated negative line items
+    if ($salePrice > 0) {
+        $sale = new Sale([
+            "name" => "Discounted Items",
+            "discount_type" => "amount",
+            "amount" => $salePrice,
+        ]);
+    }
+
     // Create the basket using a checkout request - the response will contain the payment link to display to the customer
     $checkoutBasket = null;
     try {
-        $checkoutBasket = Checkout::checkoutRequest($basket, $checkoutItems);
+        $checkoutBasket = Checkout::checkoutRequest($basket, $checkoutItems, $sale);
         moduleLog("created Tebex basket", [$basket, $checkoutItems], $checkoutBasket);
     } catch (TebexCheckout\ApiException $e) {
         moduleLog("failed creating Tebex basket", [$basket, $checkoutItems], $e->getResponseBody());

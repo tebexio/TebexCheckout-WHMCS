@@ -6,17 +6,14 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'Tebex\\' => array($baseDir . '/src', $baseDir . '/src'),
-    'TebexHeadless\\TebexHeadless\\' => array($baseDir . '/src/Headless/lib'),
-    'TebexHeadless\\' => array($baseDir . '/src/Headless/lib'),
-    'TebexCheckout\\TebexCheckout\\' => array($baseDir . '/src/Checkout/lib'),
-    'TebexCheckout\\' => array($baseDir . '/src/Checkout/lib'),
+    'Tebex\\Webhook\\' => array($baseDir . '/lib/tebex-sdk-php/Webhook'),
+    'Tebex\\Plugin\\' => array($baseDir . '/lib/plugin-sdk'),
+    'Tebex\\' => array($baseDir . '/lib/tebex-sdk-php'),
+    'TebexCheckout\\TebexCheckout\\' => array($baseDir . '/lib/tebex-sdk-php/Checkout/lib'),
+    'TebexCheckout\\' => array($baseDir . '/lib/tebex-sdk-php/Checkout/lib'),
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-factory/src', $vendorDir . '/psr/http-message/src'),
     'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
-    'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'GuzzleHttp\\Psr7\\' => array($vendorDir . '/guzzlehttp/psr7/src'),
     'GuzzleHttp\\Promise\\' => array($vendorDir . '/guzzlehttp/promises/src'),
     'GuzzleHttp\\' => array($vendorDir . '/guzzlehttp/guzzle/src'),
-    'Doctrine\\Instantiator\\' => array($vendorDir . '/doctrine/instantiator/src/Doctrine/Instantiator'),
-    'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
 );

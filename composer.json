@@ -1,0 +1,15 @@
+{
+  "name": "tebexio/tebexcheckout",
+  "autoload": {
+    "psr-4": {
+      "Tebex\\": "lib/tebex-sdk-php/",
+      "Tebex\\Plugin\\": "lib/plugin-sdk/",
+      "Tebex\\Webhook\\": "lib/tebex-sdk-php/Webhook",
+      "TebexCheckout\\TebexCheckout\\": "lib/tebex-sdk-php/Checkout/lib/",
+      "TebexCheckout\\": "lib/tebex-sdk-php/Checkout/lib/"
+    }
+  },
+  "require": {
+    "guzzlehttp/guzzle": "^7.0"
+  }
+}

@@ -90,7 +90,7 @@ class MessageFormatter implements MessageFormatterInterface
                         break;
                     case 'req_headers':
                         $result = \trim($request->getMethod()
-                                . ' MessageFormatter.php' .$request->getRequestTarget())
+                                .' '.$request->getRequestTarget())
                             .' HTTP/'.$request->getProtocolVersion()."\r\n"
                             .$this->headers($request);
                         break;

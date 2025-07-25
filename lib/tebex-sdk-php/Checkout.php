@@ -7,22 +7,26 @@ use TebexCheckout\ApiException;
 use TebexCheckout\Configuration;
 use TebexCheckout\Model\AddPackageRequest;
 use TebexCheckout\Model\Basket;
+use TebexCheckout\Model\CheckoutRequest;
 use TebexCheckout\Model\CreateBasketRequest;
 use TebexCheckout\Model\Package;
 use TebexCheckout\Model\Payment;
 use TebexCheckout\Model\RecurringPayment;
 use TebexCheckout\Model\Sale;
+use TebexCheckout\Model\UpdateSubscriptionRequest;
 use TebexCheckout\TebexCheckout\BasketsApi;
+use TebexCheckout\TebexCheckout\CheckoutApi;
 use TebexCheckout\TebexCheckout\PaymentsApi;
 use TebexCheckout\TebexCheckout\RecurringPaymentsApi;
 
 class Checkout extends TebexAPI {
+    protected static CheckoutApi $checkoutApi;
     protected static BasketsApi $basketsApi;
     protected static PaymentsApi $paymentsApi;
     protected static RecurringPaymentsApi $recurringPaymentsApi;
 
     public static function createBasket(CreateBasketRequest $request) : Basket {
-        return self::$basketsApi->createBasket();
+        return self::$basketsApi->createBasket($request);
     }
 
     public static function setApiKeys(string $projectId, string $privateKey) {
@@ -35,6 +39,8 @@ class Checkout extends TebexAPI {
         self::$paymentsApi = new PaymentsApi(new Client(),
             Configuration::getDefaultConfiguration()->setUsername(self::$_projectId)->setPassword(self::$_privateKey));
         self::$recurringPaymentsApi = new RecurringPaymentsApi(new Client(),
+            Configuration::getDefaultConfiguration()->setUsername(self::$_projectId)->setPassword(self::$_privateKey));
+        self::$checkoutApi = new CheckoutApi(new Client(),
             Configuration::getDefaultConfiguration()->setUsername(self::$_projectId)->setPassword(self::$_privateKey));
     }
 
@@ -61,22 +67,24 @@ class Checkout extends TebexAPI {
         return self::$basketsApi->addPackage($basket->getIdent(), $addPackageRequest);
     }
 
-    /**
-     * @param Basket $basket
-     * @param array $items An array of CheckoutItems to apply to the basket
-     * @param Sale|null $sale
-     * @return void
-     */
     public static function checkoutRequest(Basket $basket, array $items, Sale $sale = null) : Basket {
-        //TODO
+        $request = new CheckoutRequest([
+            "basket" => $basket,
+            "items"=> $items,
+            "sale"=>$sale
+        ]);
+        return self::$checkoutApi->checkout($request);
     }
 
-    public static function removeBasketRow(Basket $basket, int $rowId) : Basket {
-        //TODO
+    /**
+     * @throws ApiException if the row or basket is invalid.
+     */
+    public static function removeBasketRow(Basket $basket, int $rowId) {
+        return self::$basketsApi->removeRowFromBasket($basket->getIdent(), $rowId);
     }
 
     public static function addSaleToBasket(Basket $basket, Sale $sale) : Basket {
-        //TODO
+        return self::$basketsApi->addSaleToBasket($basket->getIdent(), $sale);
     }
 
     /**
@@ -87,23 +95,19 @@ class Checkout extends TebexAPI {
     }
 
     public static function getPayment(string $transactionId) : Payment {
-        //TODO
+        return self::$paymentsApi->getPaymentById($transactionId);
     }
 
     public static function refundPayment(string $transactionId) : Payment {
-        //TODO
+        return self::$paymentsApi->refundPaymentById($transactionId);
     }
 
     public static function isPaymentRefunded(Payment $payment) : bool {
         return $payment->getStatus()["description"] == "Refund";
     }
 
-    public static function getRecurringPayment() : RecurringPayment {
-        //TODO
-    }
-
-    public static function updateSubscriptionProduct() {
-        //TODO
+    public static function getRecurringPayment(string $ref) : RecurringPayment {
+        return self::$recurringPaymentsApi->getRecurringPayment($ref);
     }
 
     /**
@@ -111,14 +115,6 @@ class Checkout extends TebexAPI {
      */
     public static function cancelRecurringPayment(string $recurringPaymentId) : RecurringPayment {
         return self::$recurringPaymentsApi->cancelRecurringPayment($recurringPaymentId);
-    }
-
-    public static function pauseRecurringPayment() {
-        //TODO
-    }
-
-    public static function reactivateRecurringPayment() {
-        //TODO
     }
 
     public function getApiBaseUrl(): string

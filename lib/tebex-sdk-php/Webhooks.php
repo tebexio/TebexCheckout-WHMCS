@@ -46,7 +46,6 @@ namespace Tebex {
          */
         public static function validateWebhookSignature(string $expectedSignature, string $json) : bool {
             $hook = ValidationWebhook::fromJson($json);
-
             $validSignature = $hook->validateSignature($expectedSignature, self::$_webhookSecret);
             $validIp = $hook->validateIp();
 

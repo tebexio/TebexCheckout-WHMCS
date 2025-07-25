@@ -1,6 +1,7 @@
 <?php
 
 namespace Tebex;
+
 use GuzzleHttp\Client;
 use TebexCheckout\Configuration;
 use TebexCheckout\TebexCheckout\BasketsApi;

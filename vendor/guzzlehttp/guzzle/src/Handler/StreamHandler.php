@@ -53,8 +53,14 @@ class StreamHandler
             $request = $request->withoutHeader('Expect');
 
             // Append a content-length header if body size is zero to match
-            // cURL's behavior.
-            if (0 === $request->getBody()->getSize()) {
+            // the behavior of `CurlHandler`
+            if (
+                (
+                    0 === \strcasecmp('PUT', $request->getMethod())
+                    || 0 === \strcasecmp('POST', $request->getMethod())
+                )
+                && 0 === $request->getBody()->getSize()
+            ) {
                 $request = $request->withHeader('Content-Length', '0');
             }
 
@@ -584,7 +590,7 @@ class StreamHandler
         static $args = ['severity', 'message', 'message_code', 'bytes_transferred', 'bytes_max'];
 
         $value = Utils::debugResource($value);
-        $ident = $request->getMethod() . ' StreamHandler.php' .$request->getUri()->withFragment('');
+        $ident = $request->getMethod().' '.$request->getUri()->withFragment('');
         self::addNotification(
             $params,
             static function (int $code, ...$passed) use ($ident, $value, $map, $args): void {

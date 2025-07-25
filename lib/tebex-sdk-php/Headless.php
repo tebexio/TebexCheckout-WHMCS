@@ -34,7 +34,7 @@ class Headless extends TebexAPI {
     public static function createBasket(string $username, string $completeUrl, string $cancelUrl, bool $autoRedirect=true, array $custom=null) : Basket
     {
         $createBasketRequest = new CreateBasketRequest([
-            "username" => $username, //TODO additional params
+            "username" => $username,
             "complete_url" => $completeUrl,
             "cancel_url" => $cancelUrl,
             "complete_auto_redirect" => $autoRedirect,
