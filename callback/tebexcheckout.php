@@ -58,7 +58,7 @@ if (!Webhooks::validateWebhookSignature($incomingSignature, $json) && !$debug) {
         "incomingJson" => $json,
     ]);
     
-    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.1.1")->withRuntimeVersion(phpversion());
     $event->send();
 
     return $success;
@@ -70,7 +70,7 @@ if ($webhook->isType(\Tebex\Webhook\VALIDATION_WEBHOOK)) {
     echo json_encode(["id" => $webhook->getId()]);
 
     $event = new PluginEvent($gatewayParams['accountId'], "INFO", "Validation success");
-    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.1.1")->withRuntimeVersion(phpversion());
     $event->send();
     return;
 }
@@ -122,7 +122,7 @@ if ($webhook->isTypeOfRecurringPayment()) {
                     http_response_code(400);
 
                     $event = new PluginEvent($gatewayParams['accountId'], "ERROR", "unrecognized product type for subscription: " . $recurringProductType);
-                    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.0.0")->withRuntimeVersion(phpversion());
+                    $event = $event->withFrameworkVersion("Not Available")->withPluginVersion("2.1.1")->withRuntimeVersion(phpversion());
                     $event->send();
                     return;
                 }
@@ -150,10 +150,13 @@ else if ($webhook->isType(PAYMENT_COMPLETED)) {
     $invoiceId = $paymentSubject->getCustom()["invoiceId"];
     $transactionId = $paymentSubject->getTransactionId();
 
-    // tax is included as part of the transaction fees. the payment amount will be the full amount paid so we must separate the two for reporting
-    // otherwise it will appear that the customer overpays and has a remaining credit balance
+    // tax is included as part of the transaction fees.
     $paymentFee = $paymentSubject->getFees()["gateway"]["amount"] + $paymentSubject->getFees()["tax"]["amount"];
-    $paymentAmount = $paymentSubject->getPricePaid()["amount"] - $paymentFee;
+
+    // the payment amount will be the price of the invoice. we do not use price_paid as it includes the transaction fees,
+    // which would incorrectly credit the customer by the fee amount
+    $paymentAmount = $paymentSubject->getPrice()["amount"] - $paymentFee;
+
     $transactionStatus = $paymentSubject->getStatus()["description"] == "Complete" ? 'Success' : 'Failure';
 
     /**

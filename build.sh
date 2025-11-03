@@ -9,7 +9,7 @@
 #
 # This structure allows a user to unzip the archive directly into their `gateways` folder in order to install Tebex.
 
-VERSION="2.1.0"
+VERSION="2.1.1"
 
 # Make temporary build dir, clearing it out if it existed
 rm -r .build;mkdir .build

@@ -277,7 +277,7 @@ function tebexcheckout_link($params)
             "request_items" => $checkoutItems,
             "response" => $e->getResponseBody()
         ]);
-        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
+        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.1")->withRuntimeVersion(phpversion());
         $event->send();
 
         return '<span style="color: red">Error! Failed to create Tebex basket. See module log.</span>';
@@ -371,7 +371,7 @@ function tebexcheckout_refund($params)
             "request_transaction_id" => $transactionIdToRefund,
             "response" => $e->getResponseBody()
         ]);
-        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.0")->withRuntimeVersion(phpversion());
+        $event = $event->withFrameworkVersion($whmcsVersion)->withPluginVersion("2.1.1")->withRuntimeVersion(phpversion());
         $event->send();
         return array(
             'status' => 'error'
@@ -493,7 +493,7 @@ function _addHostingCheckoutItem($invoiceItem, $hostingObject, $checkoutItems, $
     if (!$allowSubscriptions && $payment_type == "subscription") {
         $payment_type = "single";
     }
-
+    
     // add the recurring portion to the basket
     $recurringHostingPackage = Checkout\PackageBuilder::new()
         ->name(mb_strimwidth($invoiceItem["description"], 0, 61, "...", "UTF-8"))

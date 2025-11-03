@@ -35,7 +35,7 @@ namespace Tebex {
          * Validates the webhook signature and IP, ensuring that the webhook was received from Tebex. Requires that your secret
          * key is set and that the REMOTE_ADDR header is present.
          *
-         * This is a helper function. You may also validate webhooks using the ValidationWebhook's
+         * This is a helper function. You may also validate webhooks using the ValidationWebhook's individual validation functions
          *  @see ValidationWebhook::validateSignature()
          *  @see ValidationWebhook::validateIp()
          *
