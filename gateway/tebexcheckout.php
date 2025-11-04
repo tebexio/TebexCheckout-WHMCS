@@ -212,7 +212,9 @@ function tebexcheckout_link($params)
         ->country($country)
         ->returnUrl($returnUrl)->completeUrl($returnUrl)
         ->custom([ // provided via webhook to mark invoice as paid
-            "invoiceId" => $invoiceId
+            "invoiceId" => $invoiceId,
+            "amount" => $amount,
+            "currency" => $currencyCode,
         ])->build();
 
     $checkoutItems = [];

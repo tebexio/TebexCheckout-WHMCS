@@ -147,15 +147,29 @@ else if ($webhook->isType(PAYMENT_COMPLETED)) {
     // Handle payment notification webhooks, we need to update the paid invoice to have a status of Paid.
     $paymentSubject = $webhook->getSubject();
 
+    // extract custom data
     $invoiceId = $paymentSubject->getCustom()["invoiceId"];
+    $amount = $paymentSubject->getCustom()["amount"]; // this will be the amount we need to mark the invoice as paid
+    $currency = $paymentSubject->getCustom()["currency"];
+
     $transactionId = $paymentSubject->getTransactionId();
 
     // tax is included as part of the transaction fees.
     $paymentFee = $paymentSubject->getFees()["gateway"]["amount"] + $paymentSubject->getFees()["tax"]["amount"];
 
-    // the payment amount will be the price of the invoice. we do not use price_paid as it includes the transaction fees,
-    // which would incorrectly credit the customer by the fee amount
-    $paymentAmount = $paymentSubject->getPrice()["amount"] - $paymentFee;
+    // ensure the amount paid covered the invoice
+    if ($paymentSubject->getPrice()["amount"] < $amount) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Payment amount is less than invoice amount"
+        ]);
+        http_response_code(400);
+        return;
+    }
+
+    // the paymentintent's price will include the fees. for some gateways, this fee is causing invoices to remain unpaid
+    // so we use the amount at invoice creation
+    $paymentAmount = $amount; //$paymentSubject->getPrice()["amount"]; (includes gateway fee)
 
     $transactionStatus = $paymentSubject->getStatus()["description"] == "Complete" ? 'Success' : 'Failure';
 
