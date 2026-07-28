@@ -150,10 +150,9 @@ else if ($webhook->isType(PAYMENT_COMPLETED)) {
     $invoiceId = $paymentSubject->getCustom()["invoiceId"];
     $transactionId = $paymentSubject->getTransactionId();
 
-    // tax is included as part of the transaction fees. the payment amount will be the full amount paid so we must separate the two for reporting
-    // otherwise it will appear that the customer overpays and has a remaining credit balance
-    $paymentFee = $paymentSubject->getFees()["gateway"]["amount"] + $paymentSubject->getFees()["tax"]["amount"];
-    $paymentAmount = $paymentSubject->getPricePaid()["amount"] - $paymentFee;
+    $paymentFee = $paymentSubject->getFees()["gateway"]["amount"];
+    $taxAmount = $paymentSubject->getFees()["tax"]["amount"];
+    $paymentAmount = $paymentSubject->getPricePaid()["amount"] - $taxAmount;
     $transactionStatus = $paymentSubject->getStatus()["description"] == "Complete" ? 'Success' : 'Failure';
 
     /**
